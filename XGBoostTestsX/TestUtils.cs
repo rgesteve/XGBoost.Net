@@ -60,5 +60,53 @@ namespace XGBoostTestsX
 	return labelsTrain;
       }
     }
+
+    public static float[][] GetClassifierDataTest()
+    {
+      var testCols = 3;
+      var testRows = 418;
+
+      var dataTest = new float[testRows][];
+      var testFilePath = Path.Combine(GetDataPath(), "test.csv");
+
+      using (var parser = new CsvTextFieldParser(testFilePath)) {
+        //parser.Delimiters = new[] string() {","};
+
+	var row = 0;
+
+        while (!parser.EndOfData) {
+          dataTest[row] = new float[testCols];
+          var fields = parser.ReadFields();
+
+          for (var col = 0; col < fields.Length; col++)
+            dataTest[row][col] = float.Parse(fields[col]);
+          row += 1;
+        }
+
+	return dataTest;
+      }
+    }
+
+    public static bool ClassifierPredsCorrect(float[] preds) {
+      var predFilePath = Path.Combine(GetDataPath(), "predsclas.csv");
+      using (var parser = new CsvTextFieldParser(predFilePath)) {
+        var row = 0;
+        var predInd = 0;
+
+        while (!parser.EndOfData) {
+          var fields = parser.ReadFields();
+
+          for (var col = 0; col < fields.Length; col++) {
+            var absDiff = Math.Abs(float.Parse(fields[col]) - preds[predInd]);
+            if (absDiff > 0.01F)
+              return false;
+            predInd += 1;
+          }
+          row += 1;
+        }
+      }
+      return true; // we haven't returned from a wrong prediction so everything is right
+    }
+
   }
 }

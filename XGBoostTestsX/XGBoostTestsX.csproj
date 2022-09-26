@@ -22,4 +22,8 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\XGBoost\XGBoost.csproj" />
+  </ItemGroup>
+
 </Project>

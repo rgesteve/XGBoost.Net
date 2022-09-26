@@ -1,10 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text.RegularExpressions;
+using System.Text.Json;
 using System.Runtime.InteropServices;
 
 namespace XGBoost.lib
 {
+  public static class XGBoostV
+  {
+  	public static System.Version Version()
+	{
+	  int major, minor, patch;
+          XGBOOST_NATIVE_METHODS.XGBoostVersion(out major, out minor, out patch);
+	  return new System.Version(major, minor, patch);
+	}
+  }
+  
   public class Booster : IDisposable
   {
     private bool disposed;
@@ -51,10 +63,29 @@ namespace XGBoost.lib
     {
       ulong predsLen;
       IntPtr predsPtr;
+      var ss = DumpModelEx("", with_stats: 0, format : "json");
+      Console.WriteLine($"****  The booster has {ss.Length} trees.");
+      Regex boosterPrefix = new Regex(@"^booster\[\d+\]");
+      for (int i = 0; i < ss.Length; i++){
+        Console.WriteLine($"****  The booster's tree {i} is '{ss[i]}', which matches: {boosterPrefix.IsMatch(ss[i])}.");
+      }
+      #if false
+      Console.WriteLine("****  Jus ready to call XGBoosterPredict");
       var output = XGBOOST_NATIVE_METHODS.XGBoosterPredict(
           handle, test.Handle, normalPrediction, 0, out predsLen, out predsPtr);
+      Console.WriteLine($"****  Return with an output value of {output}.");
+      #endif
+ #if false
       if (output == -1) throw new DllFailException(XGBOOST_NATIVE_METHODS.XGBGetLastError());
-      return GetPredictionsArray(predsPtr, predsLen);
+//#else
+      if (output == -1) {
+      	 var msg = XGBOOST_NATIVE_METHODS.XGBGetLastError();
+	 Console.WriteLine($"Got an error message reading '{msg}', now throwing exception");
+	 throw new DllFailException(msg);
+      }
+#endif
+      //return GetPredictionsArray(predsPtr, predsLen);
+      return null;
     }
 
     public float[] GetPredictionsArray(IntPtr predsPtr, ulong predsLen)
@@ -172,7 +203,11 @@ namespace XGBoost.lib
         int length;
         IntPtr treePtr;
         var intptrSize = IntPtr.Size;
+	#if false
         XGBOOST_NATIVE_METHODS.XGBoosterDumpModel(handle, fmap, with_stats, out length, out treePtr);
+	#else
+	        XGBOOST_NATIVE_METHODS.XGBoosterDumpModelEx(handle, fmap, with_stats, format, out length, out treePtr);
+		#endif
         var trees = new string[length];
         int readSize = 0;
         var handle2 = GCHandle.Alloc(treePtr, GCHandleType.Pinned);
@@ -188,6 +223,29 @@ namespace XGBoost.lib
         }
         handle2.Free();
         return trees;
+    }
+
+    public void GetModel()
+    {
+      var ss = DumpModelEx("", with_stats: 0, format : "json");
+      Console.WriteLine($"****  The booster has {ss.Length} trees.");
+      var boosterPattern = @"^booster\[\d+\]";
+      List<TreeNode> ensemble = new List<TreeNode>(); // should probably return this
+
+      for (int i = 0; i < ss.Length; i++){
+        var m = Regex.Matches(ss[i], boosterPattern, RegexOptions.IgnoreCase);
+	if ((m.Count >= 1) && (m[0].Groups.Count >=1)) {
+	  var structString = ss[i].Substring(m[0].Groups[0].Value.Length);
+	  var doc = JsonDocument.Parse(structString);
+	  TreeNode t = TreeNode.Create(doc.RootElement);
+	  ensemble.Add(t);
+	  Console.WriteLine($"**** {i} got a tree {t.NodeId}");
+	} else {
+          Console.WriteLine($"****  The booster's tree {i} is '{ss[i]}'didn't match.");
+	}
+      }
+
+      Console.WriteLine($"**** ensemble has {ensemble.Count} trees.");
     }
 
     // Dispose pattern from MSDN documentation

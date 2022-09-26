@@ -3,6 +3,8 @@ using System.Data.SqlTypes;
 using System.Linq;
 using XGBoost.lib;
 
+using System;
+
 namespace XGBoost
 {
   public class XGBClassifier : BaseXgbModel
@@ -191,7 +193,14 @@ namespace XGBoost
     {
       using (var test = new DMatrix(data))
       {
+#if false
         var retArray = booster.Predict(test).Select(v => v > 0.5f ? 1f : 0f).ToArray();
+#else
+	Console.WriteLine("****** calling the booster predict");
+        var preds = booster.Predict(test);
+	Console.WriteLine("****** Narrowing results");
+        var retArray = preds.Select(v => v > 0.5f ? 1f : 0f).ToArray();
+#endif
         return retArray;
       }
     }
@@ -244,6 +253,11 @@ namespace XGBoost
     public string[] DumpModelEx(string fmap = "", int with_stats = 0, string format = "text")
     {
        return booster.DumpModelEx(fmap, with_stats, format);
+    }
+
+    public void GetModel()
+    {
+       booster.GetModel();
     }
 
     private Booster Train(IDictionary<string, object> args, DMatrix dTrain, int numBoostRound = 10)

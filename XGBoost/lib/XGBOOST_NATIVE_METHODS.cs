@@ -5,9 +5,17 @@ namespace XGBoost.lib
 {
   public class XGBOOST_NATIVE_METHODS
   {
-    private const string dllLocation = "libxgboost.dll";
+//    private const string dllLocation = "libxgboost.dll";
+      private const string dllLocation = "/data/projects/xgboost/build_docker/install/lib/libxgboost.so";
     
-    static XGBOOST_NATIVE_METHODS() { DllLoader.LoadXGBoostDll(); }
+    static XGBOOST_NATIVE_METHODS() {
+    #if false
+    DllLoader.LoadXGBoostDll();
+    #endif
+    }
+
+    [DllImport(dllLocation)]
+    public static extern void XGBoostVersion(out int major, out int minor, out int patch);
 
     [DllImport(dllLocation)]
     public static extern string XGBGetLastError();
@@ -57,6 +65,9 @@ namespace XGBoost.lib
 
     [DllImport(dllLocation)]
     public static extern int XGBoosterDumpModel(IntPtr handle, string fmap, int with_stats, out int out_len, out IntPtr dumpStr);
+
+    [DllImport(dllLocation)]
+    public static extern int XGBoosterDumpModelEx(IntPtr handle, string fmap, int with_stats, string format, out int out_len, out IntPtr dumpStr);
   }
 
 }
